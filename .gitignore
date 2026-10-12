@@ -1,0 +1,27 @@
+# Artefactos de compilación
+target/
+*.class
+
+# Azure Functions (local)
+local.settings.json
+bin/
+obj/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Logs y temporales
+*.log
+tmp/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+.azure.env
+infra/azure/paquetes/

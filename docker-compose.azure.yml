@@ -1,0 +1,13 @@
+name: usuarios-roles-eft-azure
+
+services:
+
+  bff:
+    build: ./bff-usuarios-roles
+    container_name: dsy2207-eft-bff-azure
+    environment:
+      FUNCION_USUARIOS_URL: https://${FN_USUARIOS}.azurewebsites.net
+      FUNCION_ROLES_URL: https://${FN_ROLES}.azurewebsites.net
+      FUNCION_EVENTOS_URL: https://${FN_EVENTOS}.azurewebsites.net
+    ports:
+      - "8090:8080"

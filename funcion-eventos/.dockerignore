@@ -1,0 +1,6 @@
+target/
+*.class
+local.settings.json
+.idea/
+*.iml
+.git/

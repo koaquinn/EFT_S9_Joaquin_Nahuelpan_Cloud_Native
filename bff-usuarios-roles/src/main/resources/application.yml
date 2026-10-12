@@ -1,0 +1,17 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: bff-usuarios-roles
+
+funciones:
+  usuarios-url: ${FUNCION_USUARIOS_URL:http://localhost:7071}
+  roles-url: ${FUNCION_ROLES_URL:http://localhost:7072}
+  eventos-url: ${FUNCION_EVENTOS_URL:http://localhost:7073}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

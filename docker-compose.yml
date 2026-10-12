@@ -1,0 +1,99 @@
+name: usuarios-roles-eft
+
+services:
+
+  oracle-db:
+    image: gvenzl/oracle-xe:21-slim
+    container_name: dsy2207-eft-oracle-db
+    environment:
+      ORACLE_PASSWORD: Oracle123
+      APP_USER: appuser
+      APP_USER_PASSWORD: appuser123
+    ports:
+      - "1522:1521"
+    volumes:
+      - ./db/oracle:/container-entrypoint-initdb.d:ro
+      - oracle-data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 120s
+
+  eventgrid:
+    image: workleap/eventgridemulator:latest
+    container_name: dsy2207-eft-eventgrid-emulador
+    volumes:
+      - ./infra/eventgrid/appsettings.json:/app/appsettings.json:ro
+    ports:
+      - "6500:6500"
+
+  funcion-usuarios:
+    build: ./funcion-usuarios
+    container_name: dsy2207-eft-funcion-usuarios
+    environment:
+      ORACLE_JDBC_URL: jdbc:oracle:thin:@oracle-db:1521/XEPDB1
+      ORACLE_USER: appuser
+      ORACLE_PASSWORD: appuser123
+      EVENTGRID_TOPIC_ENDPOINT: http://eventgrid:6500/usuarios-roles/api/events
+      EVENTGRID_TOPIC_KEY: clave-local
+    ports:
+      - "7071:80"
+    depends_on:
+      oracle-db:
+        condition: service_healthy
+      eventgrid:
+        condition: service_started
+
+  funcion-roles:
+    build: ./funcion-roles
+    container_name: dsy2207-eft-funcion-roles
+    environment:
+      ORACLE_JDBC_URL: jdbc:oracle:thin:@oracle-db:1521/XEPDB1
+      ORACLE_USER: appuser
+      ORACLE_PASSWORD: appuser123
+      EVENTGRID_TOPIC_ENDPOINT: http://eventgrid:6500/usuarios-roles/api/events
+      EVENTGRID_TOPIC_KEY: clave-local
+    ports:
+      - "7072:80"
+    depends_on:
+      oracle-db:
+        condition: service_healthy
+      eventgrid:
+        condition: service_started
+
+  funcion-eventos:
+    build: ./funcion-eventos
+    container_name: dsy2207-eft-funcion-eventos
+    environment:
+      ORACLE_JDBC_URL: jdbc:oracle:thin:@oracle-db:1521/XEPDB1
+      ORACLE_USER: appuser
+      ORACLE_PASSWORD: appuser123
+      ROL_POR_DEFECTO: CONSULTA
+      ADMIN_EMAIL: administracion@duocuc.cl
+      AzureWebJobsSecretStorageType: files
+    volumes:
+      - ./infra/funciones-secrets:/azure-functions-host/Secrets
+    ports:
+      - "7073:80"
+    depends_on:
+      oracle-db:
+        condition: service_healthy
+
+  bff:
+    build: ./bff-usuarios-roles
+    container_name: dsy2207-eft-bff-usuarios-roles
+    environment:
+      FUNCION_USUARIOS_URL: http://funcion-usuarios:80
+      FUNCION_ROLES_URL: http://funcion-roles:80
+      FUNCION_EVENTOS_URL: http://funcion-eventos:80
+    ports:
+      - "8080:8080"
+    depends_on:
+      - funcion-usuarios
+      - funcion-roles
+      - funcion-eventos
+
+volumes:
+  oracle-data:

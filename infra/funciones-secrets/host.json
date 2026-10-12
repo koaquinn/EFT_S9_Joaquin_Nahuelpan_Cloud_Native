@@ -1,0 +1,7 @@
+{
+  "masterKey": { "name": "master", "value": "clave-maestra-local", "encrypted": false },
+  "functionKeys": [],
+  "systemKeys": [
+    { "name": "eventgrid_extension", "value": "clave-local-eventgrid", "encrypted": false }
+  ]
+}

@@ -1,0 +1,665 @@
+{
+  "info": {
+    "name": "EFT DSY2207 - Usuarios y Roles con Azure Event Grid",
+    "description": "Variable {{bff}} apunta al BFF desplegado en Azure App Service. Los requests de creacion guardan automaticamente el id en variables de la coleccion.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "bff",
+      "value": "https://app-bff-eft-zsjou.azurewebsites.net"
+    },
+    {
+      "key": "fnUsuarios",
+      "value": "https://fn-usuarios-eft-zsjou.azurewebsites.net"
+    },
+    {
+      "key": "fnRoles",
+      "value": "https://fn-roles-eft-zsjou.azurewebsites.net"
+    },
+    {
+      "key": "fnEventos",
+      "value": "https://fn-eventos-eft-zsjou.azurewebsites.net"
+    },
+    {
+      "key": "usuarioId",
+      "value": "4"
+    },
+    {
+      "key": "usuarioConRolId",
+      "value": "5"
+    },
+    {
+      "key": "rolId",
+      "value": "4"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Demo video (reglas con eventos)",
+      "item": [
+        {
+          "name": "1. Crear usuario SIN rol (BFF REST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{bff}}/api/bff/usuarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Sofia Torres\",\n  \"username\": \"storres\",\n  \"email\": \"sofia.torres@duocuc.cl\",\n  \"activo\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.collectionVariables.set('usuarioId', datos.id);",
+                  "pm.test('id guardado en {{usuarioId}}', () => pm.expect(datos.id).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Ver usuario -> rol CONSULTA asignado por evento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{bff}}/api/bff/usuarios/{{usuarioId}}"
+          }
+        },
+        {
+          "name": "3. Crear rol (BFF GraphQL)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{bff}}/api/bff/graphql/roles",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"FINANZAS\",\n  \"descripcion\": \"Area de finanzas\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.collectionVariables.set('rolId', datos.id);",
+                  "pm.test('id guardado en {{rolId}}', () => pm.expect(datos.id).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4. Crear usuario CON ese rol (BFF GraphQL)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{bff}}/api/bff/graphql/usuarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Pedro Lagos\",\n  \"username\": \"plagos\",\n  \"email\": \"pedro.lagos@duocuc.cl\",\n  \"activo\": true,\n  \"rolId\": {{rolId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.collectionVariables.set('usuarioConRolId', datos.id);",
+                  "pm.test('id guardado en {{usuarioConRolId}}', () => pm.expect(datos.id).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Eliminar el rol (BFF GraphQL)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{bff}}/api/bff/graphql/roles/{{rolId}}"
+          }
+        },
+        {
+          "name": "6. Ver usuario -> quedo sin rol por evento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{bff}}/api/bff/graphql/usuarios/{{usuarioConRolId}}"
+          }
+        },
+        {
+          "name": "7. Historial de eventos (auditoria)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{bff}}/api/bff/eventos/auditoria"
+          }
+        },
+        {
+          "name": "8. Notificaciones generadas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{bff}}/api/bff/eventos/notificaciones"
+          }
+        },
+        {
+          "name": "9. Validacion: rol inexistente -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{bff}}/api/bff/usuarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Test\",\n  \"username\": \"test999\",\n  \"email\": \"test999@duocuc.cl\",\n  \"rolId\": 999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. BFF via REST - Usuarios",
+      "item": [
+        {
+          "name": "Listar usuarios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{bff}}/api/bff/usuarios"
+          }
+        },
+        {
+          "name": "Crear (usuario)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{bff}}/api/bff/usuarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Ana Perez\",\n  \"username\": \"aperez\",\n  \"email\": \"ana.perez@duocuc.cl\",\n  \"activo\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.collectionVariables.set('usuarioId', datos.id);",
+                  "pm.test('id guardado en {{usuarioId}}', () => pm.expect(datos.id).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener por id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{bff}}/api/bff/usuarios/{{usuarioId}}"
+          }
+        },
+        {
+          "name": "Actualizar",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{bff}}/api/bff/usuarios/{{usuarioId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Ana Perez\",\n  \"username\": \"aperez\",\n  \"email\": \"ana.perez@duocuc.cl\",\n  \"activo\": false,\n  \"rolId\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Eliminar",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{bff}}/api/bff/usuarios/{{usuarioId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. BFF via REST - Roles",
+      "item": [
+        {
+          "name": "Listar roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{bff}}/api/bff/roles"
+          }
+        },
+        {
+          "name": "Crear (role)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{bff}}/api/bff/roles",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"AUDITOR\",\n  \"descripcion\": \"Revisa trazabilidad\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.collectionVariables.set('rolId', datos.id);",
+                  "pm.test('id guardado en {{rolId}}', () => pm.expect(datos.id).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener por id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{bff}}/api/bff/roles/{{rolId}}"
+          }
+        },
+        {
+          "name": "Actualizar",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{bff}}/api/bff/roles/{{rolId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"AUDITOR\",\n  \"descripcion\": \"Revisa trazabilidad y reportes\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Eliminar",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{bff}}/api/bff/roles/{{rolId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. BFF via GraphQL - Usuarios",
+      "item": [
+        {
+          "name": "Listar usuarios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{bff}}/api/bff/graphql/usuarios"
+          }
+        },
+        {
+          "name": "Crear (usuario)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{bff}}/api/bff/graphql/usuarios",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Luis Rojas\",\n  \"username\": \"lrojas\",\n  \"email\": \"luis.rojas@duocuc.cl\",\n  \"activo\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.collectionVariables.set('usuarioId', datos.id);",
+                  "pm.test('id guardado en {{usuarioId}}', () => pm.expect(datos.id).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener por id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{bff}}/api/bff/graphql/usuarios/{{usuarioId}}"
+          }
+        },
+        {
+          "name": "Actualizar",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{bff}}/api/bff/graphql/usuarios/{{usuarioId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Luis Rojas\",\n  \"username\": \"lrojas\",\n  \"email\": \"luis.rojas@duocuc.cl\",\n  \"activo\": true,\n  \"rolId\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Eliminar",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{bff}}/api/bff/graphql/usuarios/{{usuarioId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. BFF via GraphQL - Roles",
+      "item": [
+        {
+          "name": "Listar roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{bff}}/api/bff/graphql/roles"
+          }
+        },
+        {
+          "name": "Crear (role)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{bff}}/api/bff/graphql/roles",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"SOPORTE\",\n  \"descripcion\": \"Mesa de ayuda\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.collectionVariables.set('rolId', datos.id);",
+                  "pm.test('id guardado en {{rolId}}', () => pm.expect(datos.id).to.exist);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener por id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{bff}}/api/bff/graphql/roles/{{rolId}}"
+          }
+        },
+        {
+          "name": "Actualizar",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{bff}}/api/bff/graphql/roles/{{rolId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"SOPORTE\",\n  \"descripcion\": \"Mesa de ayuda nivel 1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Eliminar",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{bff}}/api/bff/graphql/roles/{{rolId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Eventos",
+      "item": [
+        {
+          "name": "Auditoria completa",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{bff}}/api/bff/eventos/auditoria"
+          }
+        },
+        {
+          "name": "Auditoria filtrada (RolEliminado)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{bff}}/api/bff/eventos/auditoria?tipo=RolEliminado"
+          }
+        },
+        {
+          "name": "Notificaciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{bff}}/api/bff/eventos/notificaciones"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Funciones serverless directas",
+      "item": [
+        {
+          "name": "fn-usuarios REST: listar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{fnUsuarios}}/api/usuarios"
+          }
+        },
+        {
+          "name": "fn-usuarios GraphQL: listar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{fnUsuarios}}/api/graphql",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"{ usuarios { id nombre username rolId } }\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "fn-roles REST: listar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{fnRoles}}/api/roles"
+          }
+        },
+        {
+          "name": "fn-roles GraphQL: listar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{fnRoles}}/api/graphql",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"{ roles { id nombre descripcion } }\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "fn-eventos: auditoria",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{fnEventos}}/api/auditoria"
+          }
+        },
+        {
+          "name": "fn-eventos: notificaciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{fnEventos}}/api/notificaciones"
+          }
+        }
+      ]
+    }
+  ]
+}
